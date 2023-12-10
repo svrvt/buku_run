@@ -200,7 +200,7 @@ editBookmark () {
         if [[ $bmarkmenu == "http"* ]]; then
             buku -u "${id}" --url "${bmarkmenu}"
         else
-            echo "" | rofi -e "Not a valid URI, Make sure URLs start with http"
+            echo "" | _rofi -e "Not a valid URI, Make sure URLs start with http"
             editBookmark
         fi
     fi
@@ -219,7 +219,8 @@ editTitle () {
 }
 
 addMark () {
-    inserturl=$(echo -e "$(xclip -o)" | _rofi -p '> ' -mesg "Use URL below or type manually")
+    givenurl=${1:-"$(xclip -o)"}
+    inserturl=$(echo -e "$givenurl" | _rofi -p '> ' -mesg "Use URL below or type manually")
     val=$?
     if [[ $val -eq 1 ]]; then
         exit
@@ -252,28 +253,17 @@ addTags () {
 }
 
 parseBuku () {
-  echo "$(buku --nc -p | gawk -v max="$max_str_width" -v type="$display_type" '
-BEGIN {
-  RS=""
-  FS="\n"
-}
-{
-  if ($3 == "")
-    $3 = " # NOTAG"
-  id = gensub(/([0-9]+)\.(.*)/, "\\1", "g", $1)
-  url = substr(gensub(/\s+> (.*)/, "\\1", "g", $2),0,max)
-  tags = gensub(/\s+# (.*)/, "\\1", "g", $3)
-  title = substr(gensub(/[0-9]+\.\s*(.*)/, "\\1", "g", $1),0,max)
-
-  if (type == 1)
-    print id "\t" url "\t" tags
-  else
-    print id "\t" title "\t" tags
-    if (type == 3)
-      print " \t" url "\t "
-  print ""
-}
-' | column -t -s $'\t')"
+  jq_program='.[] | (.index | tostring) + "\t" + .title[0:'$max_str_width'] + "\t " + .tags'
+  if [ "$display_type" = "1" ]; then
+    jq_program='.[] | (.index | tostring) + "\t" + .uri[0:'$max_str_width'] + "\t " + .tags'
+  elif [ "$display_type" = "3" ]; then
+    jq_program="$jq_program"' + "\t" + .uri[0:'$max_str_width']'
+  fi
+  content="$(buku --nc --np --nostdin --print --json)"
+  if [[ "$content" = 'buku: waiting'* ]]; then
+    content="$(echo "$content" | tail -n+2)"
+  fi
+  echo "$(echo "$content" | jq --raw-output "$jq_program" | column -t -s $'\t')"
 }
 
 getId () {
@@ -294,39 +284,19 @@ getId () {
 }
 
 getTitleFromId () {
-  echo "$(buku --nc -p $1 | gawk '
-  BEGIN {
-    RS=""
-    FS="\n"
-  }
-  {
-    print gensub(/[0-9]+\.\s*(.*)/, "\\1", "g", $1)
-  }
-  ')"
+  echo "$(buku --nc --np --print $1 --json | jq --raw-output '.title')"
 }
 
 getUrlFromId () {
-  echo "$(buku --nc -p $1 | gawk '
-  BEGIN {
-    RS=""
-    FS="\n"
-  }
-  {
-    print gensub(/\s+> (.*)/, "\\1", "g", $2)
-  }
-  ')"
+  echo "$(buku --nc --np --print $1 --json | jq --raw-output '.uri')"
 }
 
 getTagsFromId () {
-  echo "$(buku --nc -p $1 | gawk '
-  BEGIN {
-    RS=""
-    FS="\n"
-  }
-  {
-    print gensub(/\s+# (.*)/, "\\1", "g", $3)
-  }
-  ')"
+  echo "$(buku --nc --np --print $1 --json | jq --raw-output '.tags')"
 }
 
-mode=bookmarks main
+if [[ $1 == "add" ]]; then
+  addMark "$2"
+else
+  mode=bookmarks main
+fi
