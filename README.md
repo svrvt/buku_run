@@ -11,8 +11,7 @@ rofi frontend for buku bookmarks manager
 * Open URLs
 
 ## Dependencies
-* gawk
-* sed
+* jq
 * [buku](https://github.com/jarun/buku)
 * rofi (https://github.com/DaveDavenport/rofi)
 * bash
