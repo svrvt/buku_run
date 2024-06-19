@@ -160,7 +160,8 @@ editMenu () {
     title="$(getTitleFromId $id)"
     bookmark="$(getUrlFromId $id)"
     tags="$(getTagsFromId $id)"
-    content=$(echo -e "1. title: $title\n2. url: $bookmark\n3. tags: $tags")
+	  comment="$(getCommentFromId $id)"
+    content=$(echo -e "1. title: $title\n2. url: $bookmark\n3. tags: $tags\n4. comment: $comment" )
     editmenu=$(echo -e "< Return\n---\n${content}" | _rofi -p '> ')
     val=$?
     if [[ $val -eq 1 ]]; then
@@ -176,6 +177,11 @@ editMenu () {
             editBookmark
         elif [[ $editmenu =~ title:* ]]; then
             editTitle
+        elif [[ $editmenu =~ comment:* ]]; then
+			      editComment
+
+		elif [[ $editmenu =~ Comment:* ]]; then
+			editComment
         fi
     fi
 }
@@ -217,6 +223,19 @@ editTitle () {
   fi
   mode=bookmarks main
 }
+
+editComment() {
+	commentmenu=$(echo "" | _rofi -p "> " -filter "${comment}" -mesg "Edit Comment and hit Enter")
+	val=$?
+	if [[ $val -eq 1 ]]; then
+		exit
+	elif [[ $val -eq 0 ]]; then
+		buku -u "${id}" --comment "${commentmenu}"
+	fi
+
+	mode=bookmarks main
+}
+
 
 addMark () {
     givenurl=${1:-"$(xclip -o)"}
@@ -294,6 +313,11 @@ getUrlFromId () {
 getTagsFromId () {
   echo "$(buku --nc --np --print $1 --json | jq --raw-output '.tags')"
 }
+
+getCommentFromId() {
+  echo "$(buku --nc --np --print "$1" --json | jq --raw-output '.description')"
+}
+
 
 if [[ $1 == "add" ]]; then
   addMark "$2"
