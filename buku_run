@@ -78,14 +78,14 @@ Use <span color='${help_color}'>${switch_view}</span> to switch View. <span colo
         fi
     elif [[ $val -eq 0 ]]; then
         if [[ $mode == "bookmarks" ]]; then
-            for m in "${menu[@]}"; do
-				      id=$(getId "$content" "${m}")
-				      buku --nostdin -o "${id}"
             # id=$(getId "$content" "$menu")
-			      done
             # for bm in ${id}; do
             #     buku -o "${bm}"
             # done
+            for m in "${menu[@]}"; do
+              id+=("$(getId "$content" "${m}")")
+			      done
+				    buku --nostdin -o "${id[@]}"
         elif [[ $mode == "tags" ]]; then
             filter="${menu}" mode="bookmarks" main
         fi
